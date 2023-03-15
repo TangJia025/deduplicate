@@ -13,23 +13,46 @@ import (
 )
 
 const (
-	CmdCheck     = 1
-	CmdWrite     = 2
+	// 执行的命令
+	CmdCheck = 1
+	CmdWrite = 2
+
+	// 布隆过滤器虚拟分区数目
 	PartitionNum = 10000
 )
 
 var (
+	// 业务信息
 	mapBusInfo = make(map[string]*BusInfo)
 	mu         sync.RWMutex
+
+	// 去重命令的相关参数
+	mapRedisCmdValue = map[int]*cmdValue{
+		CmdCheck: {
+			cmd:         "bf.mexists",
+			existResult: 1,
+		},
+		CmdWrite: {
+			cmd:         "bf.madd",
+			existResult: 0,
+		},
+	}
 )
 
+// cmdValue 去重命令参数
+type cmdValue struct {
+	cmd         string // 去重命令
+	existResult int    // 重复时的返回值
+}
+
+// BusInfo 业务信息
 type BusInfo struct {
-	BusId        string
-	Addr         string
-	UserName     string
-	Password     string
-	PoolSize     int
-	MinIdleConns int
+	BusId        string //  业务id
+	Addr         string // redis实例地址
+	UserName     string // 用户名
+	Password     string // 密码
+	PoolSize     int    // 连接池大小
+	MinIdleConns int    // 最小连接数
 }
 
 type kv struct {
@@ -197,7 +220,7 @@ func checkKeys(keys []*KeyInfo) error {
 }
 
 func (rc *rebloomClient) exec(ctx context.Context, key *KeyInfo, cmd int) error {
-	redisCmd, existResult := "bf.mexists", 1
+	redisCmd, existResult := mapRedisCmdValue[cmd].cmd, mapRedisCmdValue[cmd].existResult
 	kvs := genKVs(key)
 	pipe := rc.Client.Pipeline()
 	for _, kv := range kvs {
