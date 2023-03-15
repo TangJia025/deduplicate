@@ -55,10 +55,12 @@ type BusInfo struct {
 	MinIdleConns int    // 最小连接数
 }
 
+// kv 执行去重命令的key和value
 type kv struct {
 	key, value string
 }
 
+// rebloomClient 基于redis bloomfilter模块实现的去重能力
 type rebloomClient struct {
 	*redis.Client
 	timeout time.Duration
@@ -66,6 +68,7 @@ type rebloomClient struct {
 }
 
 func init() {
+	// 获取业务信息
 	busInfos := readFromConfigCenter()
 	for _, busInfo := range busInfos {
 		mu.Lock()
@@ -73,9 +76,11 @@ func init() {
 		mu.Unlock()
 	}
 
+	// 定期刷新业务信息
 	go updateBusInfo()
 }
 
+// updateBusInfo 定期刷新业务信息
 func updateBusInfo() {
 	for {
 		time.Sleep(10 * time.Second)
@@ -89,6 +94,7 @@ func updateBusInfo() {
 	}
 }
 
+// readFromConfigCenter 从远程配置中心(业务注册时填入)获取业务信息
 func readFromConfigCenter() []*BusInfo {
 	// 真实逻辑应该从远端配置中心读取配置，这里简单构造一下
 	return []*BusInfo{
@@ -112,6 +118,7 @@ func readFromConfigCenter() []*BusInfo {
 
 }
 
+// newRebloomClient 生成一个rebloomClient
 func newRebloomClient(opts ...Option) *rebloomClient {
 	rebloomCli := &rebloomClient{}
 	for _, opt := range opts {
@@ -123,6 +130,7 @@ func newRebloomClient(opts ...Option) *rebloomClient {
 		return nil
 	}
 
+	// 使用业务配置的请求传入的配置
 	opt := &redis.Options{
 		Addr:         busInfo.Addr,
 		Username:     busInfo.UserName,
@@ -138,6 +146,7 @@ func newRebloomClient(opts ...Option) *rebloomClient {
 	return rebloomCli
 }
 
+// getBusInfo 根据业务id获取业务信息
 func getBusInfo(busId string) (*BusInfo, error) {
 	mu.RLock()
 	busInfo, ok := mapBusInfo[busId]
@@ -149,18 +158,22 @@ func getBusInfo(busId string) (*BusInfo, error) {
 	return busInfo, nil
 }
 
+// Check 仅检查
 func (rc *rebloomClient) Check(ctx context.Context, keys []*KeyInfo) error {
 	return rc.parallelExec(ctx, keys, CmdCheck)
 }
 
+// Write 检查并写入
 func (rc *rebloomClient) Write(ctx context.Context, keys []*KeyInfo) error {
 	return rc.parallelExec(ctx, keys, CmdWrite)
 }
 
+// parallelExec 针对请求的多个key并行执行检查
 func (rc *rebloomClient) parallelExec(ctx context.Context, keys []*KeyInfo, cmd int) error {
 	s := time.Now()
 	var err error
 
+	// 打印耗时和执行结果
 	defer func() {
 		cost := time.Since(s)
 		log.Printf("request cost:%vms", cost.Milliseconds())
@@ -171,10 +184,12 @@ func (rc *rebloomClient) parallelExec(ctx context.Context, keys []*KeyInfo, cmd 
 		}
 	}()
 
+	// 检查输入
 	if err = checkKeys(keys); err != nil {
 		return err
 	}
 
+	// 多goroutine并发执行
 	var (
 		wg      sync.WaitGroup
 		errRsps = make([]error, len(keys))
@@ -259,6 +274,7 @@ func genKVs(key *KeyInfo) []kv {
 
 func generateKey(busId string, i int, routeKey string) string {
 	date := time.Now().AddDate(0, 0, -i).Format("20060102")
+	// 根据routeKey计算对应虚拟分区
 	partition := crc32.ChecksumIEEE([]byte(routeKey)) % PartitionNum
 	return fmt.Sprintf("%s_%s_%d", busId, date, partition)
 }
