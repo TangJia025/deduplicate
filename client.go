@@ -13,6 +13,7 @@ type Client interface {
 }
 
 type KeyInfo struct {
+	BusId    string
 	Key      string
 	Days     int32
 	RouteKey string
