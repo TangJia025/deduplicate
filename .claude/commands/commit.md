@@ -150,7 +150,7 @@ Example of splitting commits:
 
 ## Command Options
 
-- `--no-verify`: Skip running the pre-commit checks (lint, build, generate:docs)
+- --no-verify: Skip running the pre-commit checks (go vet, go build, go test)
 
 ## Important Notes
 
