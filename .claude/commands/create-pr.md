@@ -4,7 +4,7 @@ Create a new branch, commit changes, and submit a pull request.
 
 ## Behavior
 - Creates a new branch based on current changes
-- Formats modified files using Biome
+- Formats modified files using gofmt
 - Analyzes changes and automatically splits into logical commits when appropriate
 - Each commit focuses on a single logical change or feature
 - Creates descriptive commit messages for each logical unit
