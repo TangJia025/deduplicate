@@ -17,9 +17,9 @@ Or with options:
 ## What This Command Does
 
 1. Unless specified with `--no-verify`, automatically runs pre-commit checks:
-   - `pnpm lint` to ensure code quality
-   - `pnpm build` to verify the build succeeds
-   - `pnpm generate:docs` to update documentation
+   - go vet ./... to ensure code quality
+   - go build ./... to verify the build succeeds
+   - go test ./... to ensure all tests pass
 2. Checks which files are staged with `git status`
 3. If 0 files are staged, automatically adds all modified and new files with `git add`
 4. Performs a `git diff` to understand what changes are being committed
